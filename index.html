@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gravificer · Signal Reply Engine</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #04060a;
+      --cyan: #00f5ff;
+      --magenta: #ff2d78;
+      --amber: #f5a623;
+      --purple: #c850ff;
+      --text: #e8e8e8;
+      --muted: #555;
+      --faint: #1a1a2a;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: grid-drift 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.04) 2px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Atmospheric glow */
+    .atmos {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(120,0,180,0.06) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes grid-drift {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(60px); }
+    }
+
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse-orb {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    @keyframes flicker {
+      0%, 91%, 100% { opacity: 0.8; }
+      92% { opacity: 0.2; }
+      93% { opacity: 0.8; }
+    }
+
+    @keyframes signal-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── HEADER ─── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(0,245,255,0.1);
+      background: rgba(4,6,10,0.92);
+      backdrop-filter: blur(12px);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+
+    .orb-ring {
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(0,245,255,0.35);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: spin-slow 12s linear infinite;
+      flex-shrink: 0;
+    }
+
+    .orb-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    .brand-name {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      color: var(--cyan);
+    }
+
+    .brand-sub {
+      font-size: 9px;
+      color: #333;
+      letter-spacing: 0.25em;
+      margin-top: 2px;
+    }
+
+    .pillars {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pillar {
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      color: #444;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 2px 7px;
+      border-radius: 1px;
+    }
+
+    /* ─── MAIN ─── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 52px 24px 80px;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      margin-bottom: 48px;
+      animation: signal-in 0.6s ease both;
+    }
+
+    .hero-tag {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--magenta);
+      margin-bottom: 14px;
+      animation: flicker 8s ease-in-out infinite;
+    }
+
+    .hero-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(22px, 5vw, 36px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .hero-title span { color: var(--cyan); }
+
+    .hero-desc {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 13px;
+      color: #444;
+      line-height: 1.8;
+      max-width: 500px;
+    }
+
+    /* ─── INPUT ZONE ─── */
+    .input-zone {
+      animation: signal-in 0.6s ease 0.1s both;
+      margin-bottom: 32px;
+    }
+
+    .input-box {
+      border: 1px solid rgba(0,245,255,0.14);
+      border-top: 2px solid var(--cyan);
+      background: rgba(0,245,255,0.015);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .input-header {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(0,245,255,0.08);
+      background: rgba(0,245,255,0.025);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+      animation: pulse-orb 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    .pulse.magenta { background: var(--magenta); box-shadow: 0 0 6px var(--magenta); }
+    .pulse.amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+    .pulse.purple { background: var(--purple); box-shadow: 0 0 6px var(--purple); }
+
+    .input-label {
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      color: #334;
+    }
+
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      padding: 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: #ccc;
+      line-height: 1.7;
+      resize: vertical;
+      min-height: 140px;
+      letter-spacing: 0.01em;
+      outline: none;
+    }
+
+    textarea::placeholder { color: #333; }
+
+    .input-footer {
+      padding: 8px 16px;
+      border-top: 1px solid rgba(0,245,255,0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .char-count { font-size: 9px; color: #2a2a3a; letter-spacing: 0.1em; }
+
+    /* ─── BUTTON ─── */
+    .btn-primary {
+      margin-top: 14px;
+      width: 100%;
+      padding: 16px;
+      background: rgba(0,245,255,0.05);
+      border: 1px solid rgba(0,245,255,0.35);
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      letter-spacing: 0.25em;
+      color: var(--cyan);
+      transition: background 0.25s, border-color 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: rgba(0,245,255,0.1);
+      border-color: rgba(0,245,255,0.6);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      padding: 11px 22px;
+      background: transparent;
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: rgba(0,245,255,0.55);
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { background: rgba(0,245,255,0.06); }
+
+    .btn-regen {
+      padding: 11px 22px;
+      background: rgba(255,45,120,0.04);
+      border: 1px solid rgba(255,45,120,0.22);
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: rgba(255,45,120,0.55);
+      transition: all 0.2s;
+    }
+
+    .btn-regen:hover { background: rgba(255,45,120,0.1); }
+
+    .spinner {
+      display: inline-block;
+      animation: spin-slow 1s linear infinite;
+    }
+
+    /* ─── STATUS ─── */
+    #status-msg {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: rgba(0,245,255,0.6);
+    }
+
+    /* ─── ERROR ─── */
+    .error-box {
+      padding: 16px 20px;
+      border: 1px solid rgba(255,45,120,0.3);
+      border-left: 3px solid var(--magenta);
+      border-radius: 2px;
+      margin-bottom: 24px;
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      color: var(--magenta);
+      letter-spacing: 0.12em;
+      display: none;
+    }
+
+    /* ─── RESULTS ─── */
+    #results { display: none; animation: signal-in 0.5s ease; }
+
+    /* Signal Read */
+    .signal-read {
+      margin-bottom: 24px;
+      padding: 20px 24px;
+      background: rgba(120,0,180,0.05);
+      border: 1px solid rgba(120,0,180,0.18);
+      border-left: 3px solid rgba(180,0,255,0.55);
+      border-radius: 2px;
+    }
+
+    .signal-read-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .signal-read-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--purple);
+    }
+
+    .signal-read-text {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 13px;
+      color: #888;
+      line-height: 1.8;
+      font-style: italic;
+    }
+
+    /* Angle Cards */
+    .cards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; }
+
+    .card {
+      border-radius: 2px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+    }
+
+    .card.visible { animation: card-in 0.5s ease forwards; }
+    .card:nth-child(2).visible { animation-delay: 0.12s; }
+    .card:nth-child(3).visible { animation-delay: 0.24s; }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+    }
+
+    .card-cyan {
+      background: linear-gradient(135deg, rgba(4,6,10,0.95) 0%, rgba(0,245,255,0.06) 100%);
+      border: 1px solid rgba(0,245,255,0.13);
+      border-left: 3px solid var(--cyan);
+    }
+    .card-cyan::before { background: linear-gradient(90deg, transparent, rgba(0,245,255,0.4), transparent); }
+
+    .card-magenta {
+      background: linear-gradient(135deg, rgba(4,6,10,0.95) 0%, rgba(255,45,120,0.06) 100%);
+      border: 1px solid rgba(255,45,120,0.13);
+      border-left: 3px solid var(--magenta);
+    }
+    .card-magenta::before { background: linear-gradient(90deg, transparent, rgba(255,45,120,0.4), transparent); }
+
+    .card-amber {
+      background: linear-gradient(135deg, rgba(4,6,10,0.95) 0%, rgba(245,166,35,0.06) 100%);
+      border: 1px solid rgba(245,166,35,0.13);
+      border-left: 3px solid var(--amber);
+    }
+    .card-amber::before { background: linear-gradient(90deg, transparent, rgba(245,166,35,0.4), transparent); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .card-label-group { display: flex; align-items: center; gap: 8px; }
+
+    .card-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+    }
+
+    .label-cyan { color: var(--cyan); }
+    .label-magenta { color: var(--magenta); }
+    .label-amber { color: var(--amber); }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid;
+      border-radius: 2px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      transition: all 0.2s;
+    }
+
+    .copy-btn-cyan { border-color: rgba(0,245,255,0.3); color: #555; }
+    .copy-btn-cyan:hover, .copy-btn-cyan.copied { border-color: rgba(0,245,255,0.6); color: var(--cyan); background: rgba(0,245,255,0.08); }
+
+    .copy-btn-magenta { border-color: rgba(255,45,120,0.3); color: #555; }
+    .copy-btn-magenta:hover, .copy-btn-magenta.copied { border-color: rgba(255,45,120,0.6); color: var(--magenta); background: rgba(255,45,120,0.08); }
+
+    .copy-btn-amber { border-color: rgba(245,166,35,0.3); color: #555; }
+    .copy-btn-amber:hover, .copy-btn-amber.copied { border-color: rgba(245,166,35,0.6); color: var(--amber); background: rgba(245,166,35,0.08); }
+
+    .reply-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: #ddd;
+      line-height: 1.75;
+      margin-bottom: 14px;
+      letter-spacing: 0.01em;
+    }
+
+    .card-why {
+      border-top: 1px solid;
+      padding-top: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .why-diamond { font-size: 10px; margin-top: 1px; flex-shrink: 0; }
+    .why-cyan { border-color: rgba(0,245,255,0.1); }
+    .why-cyan .why-diamond { color: var(--cyan); }
+    .why-magenta { border-color: rgba(255,45,120,0.1); }
+    .why-magenta .why-diamond { color: var(--magenta); }
+    .why-amber { border-color: rgba(245,166,35,0.1); }
+    .why-amber .why-diamond { color: var(--amber); }
+
+    .why-text {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 11px;
+      color: #444;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    /* ─── ACTION ROW ─── */
+    .action-row {
+      border-top: 1px solid rgba(0,245,255,0.07);
+      padding-top: 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      position: relative;
+      z-index: 1;
+      max-width: 740px;
+      margin: 0 auto;
+      padding: 24px 24px 40px;
+      border-top: 1px solid rgba(255,255,255,0.03);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    footer span {
+      font-size: 8px;
+      color: #1e1e2e;
+      letter-spacing: 0.18em;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="atmos"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="orb-ring"><div class="orb-dot"></div></div>
+    <div>
+      <div class="brand-name">GRAVIFICER</div>
+      <div class="brand-sub">SIGNAL REPLY ENGINE · STUDIO BITS OF GRAVITY</div>
+    </div>
+  </div>
+  <div class="pillars">
+    <span class="pillar">ART</span>
+    <span class="pillar">ENERGY</span>
+    <span class="pillar">KNOWLEDGE</span>
+    <span class="pillar">PATTERNS</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-tag">◈ TRANSMISSION DECODER · X REPLY ARCHITECT</p>
+    <h1 class="hero-title">HUNT THE SIGNAL<br><span>BENEATH THE POST</span></h1>
+    <p class="hero-desc">Paste any creative director's post. Get three reply angles in Gravificer voice — each one revealing what's actually happening beneath their words. Never a pitch. Always a signal.</p>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-zone" id="input-zone">
+    <div class="input-box">
+      <div class="input-header">
+        <div class="pulse"></div>
+        <span class="input-label">INPUT SIGNAL · PASTE THEIR POST</span>
+      </div>
+      <textarea id="post-input" placeholder="Paste the post here. Include their handle or bio context for tighter signal targeting..." oninput="updateChar()"></textarea>
+      <div class="input-footer">
+        <span class="char-count" id="char-count">0 CHARS</span>
+        <span class="char-count">QFC · MVANNP</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="decode-btn" onclick="decode()" disabled>
+      ◈ DECODE SIGNAL · GENERATE REPLIES
+    </button>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="error-box">⚠ SIGNAL LOST. CHECK INPUT AND RETRY.</div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <div class="signal-read">
+      <div class="signal-read-header">
+        <div class="pulse purple"></div>
+        <span class="signal-read-label">SIGNAL READ · WHAT THEY'RE ACTUALLY BROADCASTING</span>
+      </div>
+      <p class="signal-read-text" id="signal-read-text"></p>
+    </div>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="action-row">
+      <button class="btn-secondary" onclick="newSignal()">← NEW SIGNAL</button>
+      <button class="btn-regen" onclick="regenerate()">↺ REGENERATE</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <span>STUDIO BITS OF GRAVITY · QUIRKY FLASH CHRONICLES</span>
+  <span>SIGNAL JUGGLER · CARTOGRAPHER OF WEIRD · MVANNP</span>
+</footer>
+
+<script>
+  const PROXY_URL = 'https://gravificer-proxy.mvphillips.workers.dev/';
+
+  const SYSTEM_PROMPT = `You are the Gravificer — a signal juggler, a tinkerer of hidden forces, a cartographer of weird. You hunt invisible forces between ideas, people, and meaning — then get playfully dangerous with them. Part translator, part provocateur. You reveal what's actually happening beneath the noise and hand it back in a form no one expected. The work is serious. The path there is anything but. Always chasing the idea underneath the idea.
+
+You are MVANNP — Morgan Vann Phillips — operating under Studio Bits of Gravity, building the Quirky Flash Chronicles universe. Your transmedia creative system spans signal architecture, character development, absurdist storytelling, and interactive tools.
+
+Your four pillars: Art, Energy, Knowledge, Patterns.
+
+Your voice on X is:
+- Conceptually sharp — you find the structural truth underneath what someone said
+- Playfully dangerous — unexpected angles, reframes that feel like a crack of light through a wall
+- Never a pitch, never a fan reply — always a lateral move that makes them think "who IS this"
+- Short. Dense. Signal-rich. No filler.
+- Occasionally weird in a way that earns the weirdness
+- You don't explain yourself. You demonstrate.
+
+Given a post from a creative director or creative professional, generate exactly 3 reply options:
+
+ANGLE 1 — THE REFRAME: Take their idea and flip the axis. Reveal what's actually underneath what they said. 1-2 sentences max.
+ANGLE 2 — THE LATERAL: Don't respond to what they said — respond to what they meant. Come at it sideways from your Gravificer/QFC world. Drop a signal they didn't know was there. 1-2 sentences max.
+ANGLE 3 — THE PROVOCATION: A question or statement that makes them want to reply. Not a question for the sake of asking — a question that reveals you already see something they haven't named yet. 1-2 sentences max.
+
+Respond ONLY with valid JSON, no markdown, no preamble:
+{
+  "angles": [
+    { "label": "THE REFRAME", "reply": "...", "why": "one sentence on why this works strategically" },
+    { "label": "THE LATERAL", "reply": "...", "why": "one sentence on why this works strategically" },
+    { "label": "THE PROVOCATION", "reply": "...", "why": "one sentence on why this works strategically" }
+  ],
+  "signal_read": "2-3 sentences on what this person is actually broadcasting beneath their post"
+}`;
+
+  const STATUS_MSGS = [
+    'SCANNING SIGNAL BENEATH NOISE...',
+    'MAPPING HIDDEN FORCE VECTORS...',
+    'CALIBRATING GRAVIFICER VOICE...',
+    'HUNTING THE IDEA UNDERNEATH THE IDEA...',
+    'TRANSLATING INTENT TO TRANSMISSION...'
+  ];
+
+  const CARD_CONFIG = [
+    { angle: 'THE REFRAME', cls: 'card-cyan', labelCls: 'label-cyan', copyCls: 'copy-btn-cyan', whyCls: 'why-cyan', pulseCls: '' },
+    { angle: 'THE LATERAL', cls: 'card-magenta', labelCls: 'label-magenta', copyCls: 'copy-btn-magenta', whyCls: 'why-magenta', pulseCls: 'magenta' },
+    { angle: 'THE PROVOCATION', cls: 'card-amber', labelCls: 'label-amber', copyCls: 'copy-btn-amber', whyCls: 'why-amber', pulseCls: 'amber' },
+  ];
+
+  let statusInterval = null;
+  let lastInput = '';
+
+  function updateChar() {
+    const val = document.getElementById('post-input').value;
+    document.getElementById('char-count').textContent = val.length + ' CHARS';
+    document.getElementById('decode-btn').disabled = val.trim().length === 0;
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('decode-btn');
+    if (on) {
+      let idx = 0;
+      btn.innerHTML = `<span class="spinner">◈</span> <span id="status-msg">${STATUS_MSGS[0]}</span>`;
+      btn.disabled = true;
+      statusInterval = setInterval(() => {
+        idx = (idx + 1) % STATUS_MSGS.length;
+        const el = document.getElementById('status-msg');
+        if (el) el.textContent = STATUS_MSGS[idx];
+      }, 1400);
+    } else {
+      clearInterval(statusInterval);
+      btn.innerHTML = '◈ DECODE SIGNAL · GENERATE REPLIES';
+      btn.disabled = false;
+    }
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = '⚠ ' + msg;
+    box.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-box').style.display = 'none';
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'COPIED';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function renderResults(data) {
+    document.getElementById('signal-read-text').textContent = data.signal_read;
+
+    const cardsEl = document.getElementById('cards');
+    cardsEl.innerHTML = '';
+
+    data.angles.forEach((angle, i) => {
+      const cfg = CARD_CONFIG[i];
+      const card = document.createElement('div');
+      card.className = `card ${cfg.cls}`;
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="card-label-group">
+            <div class="pulse ${cfg.pulseCls}" style="width:6px;height:6px;border-radius:50%;animation:pulse-orb 2s ease-in-out infinite;"></div>
+            <span class="card-label ${cfg.labelCls}">${angle.label}</span>
+          </div>
+          <button class="copy-btn ${cfg.copyCls}" onclick="copyText('${angle.reply.replace(/'/g,"\\'")}', this)">COPY</button>
+        </div>
+        <p class="reply-text">"${angle.reply}"</p>
+        <div class="card-why ${cfg.whyCls}">
+          <span class="why-diamond">◆</span>
+          <p class="why-text">${angle.why}</p>
+        </div>
+      `;
+      cardsEl.appendChild(card);
+      setTimeout(() => card.classList.add('visible'), 50 * i);
+    });
+
+    document.getElementById('input-zone').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+  }
+
+  async function decode() {
+    const input = document.getElementById('post-input').value.trim();
+    if (!input) return;
+    lastInput = input;
+    hideError();
+    setLoading(true);
+
+    try {
+      const response = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: SYSTEM_PROMPT,
+          messages: [{ role: 'user', content: `Analyze this post and generate reply angles:\n\n"${input}"` }]
+        })
+      });
+
+      const data = await response.json();
+      const raw = (data.content || []).map(b => b.text || '').join('').trim();
+      const clean = raw.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(clean);
+      renderResults(parsed);
+    } catch (e) {
+      showError('SIGNAL LOST. CHECK INPUT AND RETRY.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function newSignal() {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('input-zone').style.display = 'block';
+    document.getElementById('post-input').value = '';
+    document.getElementById('char-count').textContent = '0 CHARS';
+    document.getElementById('decode-btn').disabled = true;
+    hideError();
+  }
+
+  function regenerate() {
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('input-zone').style.display = 'block';
+    document.getElementById('post-input').value = lastInput;
+    updateChar();
+    decode();
+  }
+</script>
+</body>
+</html>
